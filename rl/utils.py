@@ -38,6 +38,28 @@ def build_mlp(dims):
     return torch.nn.Sequential(*layers)
 
 
+def compute_trajectory(A, B, policy, apply_linear_dynamics, x0, T):
+    x_t = [x0]
+    u_t = []
+    for t in range(T - 1):
+        x_cur = x_t[-1]
+        u_cur = policy(x_cur, t)
+        x_next = apply_linear_dynamics(A, B, x_cur, u_cur)
+        
+        u_t.append(u_cur)
+        x_t.append(x_next)
+    
+    return x_t, u_t
+
+
+class LQR_policy():
+    def __init__(self, A, B, R, Q, Q_f, T):
+        self.K_t = generate_LQR_policy(A, B, R, Q, Q_f, T)
+        
+    def __call__(self, x, t):
+        return apply_LQR_policy(self.K_t, x, t)
+        
+
 def apply_linear_dynamics(A, B, x, u):
     '''
     computes next state
