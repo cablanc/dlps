@@ -1,4 +1,7 @@
+import plotly.graph_objects as go
 import networkx as nx
+import numpy as np
+
 
 def get_edges(graph):
     '''
