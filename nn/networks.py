@@ -4,11 +4,40 @@ import numpy as np
 
 class FullyConnectedNN(torch.nn.Module):
     '''
+    fully connected neural network
     
-    https://pytorch.org/tutorials/beginner/blitz/neural_networks_tutorial.html#sphx-glr-beginner-blitz-neural-networks-tutorial-py
+    Attributes:
+    ----------
+    indim : int
+        dimension of the input
+    outdim : int
+        dimension of the output
+    hdim : int
+        dimension of hidden layers
+    num_hidden : int
+        number of hidden layers
+    model : torch.nn.Sequential
+        
+    Methods:
+    -------
+    forward(data)
+        returns network output
     '''
-    def __init__(self, indim, outdim, hdim, num_hidden):
+    def __init__(self, indim: int, outdim: int, hdim: int, num_hidden: int):
         '''
+        builds model
+        
+        
+        Attributes:
+        ----------
+        indim : int
+            dimension of the input
+        outdim : int
+            dimension of the output
+        hdim : int
+            dimension of hidden layers
+        num_hidden : int
+            number of hidden layers
         '''
         super(FullyConnectedNN, self).__init__()
         
@@ -31,21 +60,40 @@ class FullyConnectedNN(torch.nn.Module):
             nonlinearity = torch.nn.ReLU()
             layers.extend([hidden2hidden, nonlinearity])
             
+        # build final layer without nonlinearity
         hidden2out = torch.nn.Linear(hdim, outdim)
         layers.append(hidden2out)
         
         self.model = torch.nn.Sequential(*layers)
         # print(self.model)
     
-    def forward(self, data):
-        num_examples, chan, height, width = data.shape
-        return self.model.forward(data.reshape(-1, height*width))
+    def forward(self, data: torch.Tensor) -> torch.Tensor:
+        '''
+        returns network output
+        
+        data : torch.Tensor
+            input data
+        '''
+        batch_size = data.shape[0]
+        return self.model.forward(data.reshape(batch_size, -1))
             
 
 class ConvolutionalNN(torch.nn.Module):
     '''
+    convolutional neural network
     
-    https://pytorch.org/tutorials/beginner/blitz/neural_networks_tutorial.html#sphx-glr-beginner-blitz-neural-networks-tutorial-py
+    Attributes:
+    ----------
+    filter_shapes : list of tuples
+        each tuple provides a filter shape (in channels, out channels, filter height)
+    outdim : int
+        dimension of the output
+    model : torch.nn.Sequential
+        
+    Methods:
+    -------
+    forward(data)
+        returns network output
     '''
     def __init__(self, filter_shapes, outdim):
         '''
@@ -64,7 +112,7 @@ class ConvolutionalNN(torch.nn.Module):
             layers.extend([conv_layer, nonlinearity])
             
         layers.append(torch.nn.Flatten())
-        # implement a function to compute this number!!!
+        # TODO: implement a function to compute this number!!!
         # https://cs231n.github.io/convolutional-networks/#conv
         # https://stackoverflow.com/questions/34739151/calculate-dimension-of-feature-maps-in-convolutional-neural-network
         num_final_feature_params = 512
@@ -75,7 +123,73 @@ class ConvolutionalNN(torch.nn.Module):
         self.model = torch.nn.Sequential(*layers)
         # print(self.model)
     
-    def forward(self, data):
+    def forward(self, data: torch.Tensor) -> torch.Tensor:
+        '''
+        returns network output
+        
+        data : torch.Tensor
+            input data
+        '''
         return self.model.forward(data)
     
 
+class RecurrentNN(torch.nn.Module):
+    '''
+    recurrent neural network
+    
+    Attributes:
+    ----------
+    indim : int
+    hdim : int
+    outdim : int
+    num_layers : int
+    sequence_len : int
+    rnn : torch.nn.RNN
+    fc : torch.nn.Linear
+        map from hidden space to input space
+        
+    Methods:
+    -------
+    forward(data)    
+        returns network output
+    '''
+    def __init__(self, indim: int, hdim: int, outdim: int, num_layers: int, sequence_len: int):
+        '''
+        Parameters:
+        ----------
+        indim : int
+        hdim : int
+        outdim : int
+        num_layers : int
+        sequence_len : int
+        '''
+        super(RecurrentNN, self).__init__()
+        
+        self.indim = indim
+        self.hdim = hdim
+        self.outdim = outdim
+        self.num_layers = num_layers
+        self.sequence_len = sequence_len
+        
+        self.rnn = torch.nn.RNN(self.indim, self.hdim, num_layers=self.num_layers, batch_first=True)
+        self.fc = torch.nn.Linear(self.hdim, self.outdim)
+    
+    def forward(self, data: torch.Tensor) -> torch.Tensor:
+        '''
+        returns network output
+        
+        data : torch.Tensor
+            input data
+        '''
+        batch_size = data.shape[0]
+        
+        h0 = torch.zeros(self.num_layers, batch_size, self.hdim)
+        
+        # output : the output at each unrolling with shape (batch_size, sequence_len, hidden_dim)
+        # hidden : the output at each layer of the final unrolling with shape (batch_size, num_layers, hidden_dim)
+        outputs, hidden = self.rnn(data.squeeze(1), h0)
+        final_output = outputs[:, -1, :]
+        
+        prediction = self.fc(final_output)
+            
+        return prediction

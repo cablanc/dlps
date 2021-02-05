@@ -30,10 +30,12 @@ def train(num_epochs, print_every, trainloader, loss_fcn, optimizer, net):
     for epoch in range(num_epochs):
         for iteration, sample in enumerate(trainloader):
             data, labels = sample
-            num_examples, chan, height, width = data.shape
+            num_examples = data.shape[0]
+            # print(data.shape, labels.shape)
 
             # pass sample through net
             output = net(data)
+            # print(output.shape)
 
             # compute loss
             loss = loss_fcn(output, labels)
@@ -78,7 +80,7 @@ def evaluate(testloader, loss_fcn, net):
     total_examples = 0
     for iteration, sample in enumerate(testloader):
         data, labels = sample
-        num_examples, chan, height, width = data.shape
+        num_examples = data.shape[0]
 
         # pass sample net
         output = net(data)
